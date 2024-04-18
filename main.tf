@@ -41,4 +41,17 @@ module "dns" {
   aws_ses_region                             = var.region
   aws_ses_domain_identity_verification_token = module.ses.aws_ses_domain_identity_verification_token
   aws_ses_domain_dkim_tokens                 = module.ses.aws_ses_domain_dkim_tokens
+  aws_acm_domain_validation_options          = module.acm.aws_acm_domain_validation_options
+  aws_acm_certificate_arn                    = module.acm.aws_acm_certificate_arn
+}
+
+module "acm" {
+  source            = "./modules/acm"
+  domain_name       = var.domain
+  public_dns_verify = module.dns.public_dns_verify
+
+}
+module "ecr" {
+  source     = "./modules/ecr"
+  image_name = "engineebase-ml"
 }

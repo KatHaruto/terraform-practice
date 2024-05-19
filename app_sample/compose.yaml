@@ -1,0 +1,10 @@
+version: "3"
+services:
+  web:
+    build: .
+    ports:
+      - "10080:10080"
+      - "80:80"
+    volumes:
+      - ./:/app
+    tty: true

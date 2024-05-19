@@ -38,3 +38,7 @@ terraform.rc
 
 lambda/build/
 lambda/*.zip
+
+ssh
+
+__pycache__/

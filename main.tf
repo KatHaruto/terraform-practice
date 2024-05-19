@@ -1,57 +1,67 @@
+data "aws_caller_identity" "current" {}
+
+data "aws_route53_zone" "domain_hosted_zone" {
+  name = var.domain
+}
+
 provider "aws" {
-  region  = var.region
+  region  = var.aws_region
   profile = var.profile_name
 }
 
-terraform {
-  required_version = "~>1.8.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.45.0"
-    }
-  }
-}
 
-module "lambda" {
-  source                         = "./modules/lambda"
-  function_name                  = "hello_world"
-  ses_invoke_lambda_rule_set_arn = module.ses.aws_ses_invoke_lambda_receipt_rule_arn
-}
 
-module "s3" {
-  source      = "./modules/s3"
-  bucket_name = var.ses_s3_bucket_name
-}
 
 module "ses" {
-  source           = "./modules/ses"
-  domain_name      = var.domain
-  receiver_address = "test@${var.domain}"
-  ses_region       = var.region
-
-  s3_bucket_name = module.s3.aws_s3_bucket_name
-  lambda_arn     = module.lambda.lambda_arn
+  source                = "./modules/ses"
+  domain_name           = var.domain
+  receiver_address      = "test@${var.domain}"
+  domain_hosted_zone_id = local.domain_hosted_zone_id
+  s3_bucket_name        = module.mail-receive-trigger.aws_s3_bucket_name
+  lambda_arn            = module.mail-receive-trigger.lambda_arn
 }
 
 module "dns" {
   source      = "./modules/dns"
   domain_name = var.domain
-
-  aws_ses_region                             = var.region
-  aws_ses_domain_identity_verification_token = module.ses.aws_ses_domain_identity_verification_token
-  aws_ses_domain_dkim_tokens                 = module.ses.aws_ses_domain_dkim_tokens
-  aws_acm_domain_validation_options          = module.acm.aws_acm_domain_validation_options
-  aws_acm_certificate_arn                    = module.acm.aws_acm_certificate_arn
+  sub_domain  = var.sub_domain
+  app_alb_dns_name = module.ecs.app_alb_dns_name
+  app_alb_zone_id = module.ecs.app_alb_zone_id
 }
 
-module "acm" {
-  source            = "./modules/acm"
-  domain_name       = var.domain
-  public_dns_verify = module.dns.public_dns_verify
-
-}
 module "ecr" {
-  source     = "./modules/ecr"
-  image_name = "engineebase-ml"
+  source      = "./modules/ecr"
+  image_name  = "app"
+  aws_profile = "personal-account"
+}
+
+module "ecs" {
+  source                      = "./modules/ecs"
+  ecs_task_name               = "app-task"
+  aws_region                  = var.aws_region
+  key_name                    = "sample-key"
+  iam_ecs_execution_role_name = "ecs-app-execution-role"
+  iam_ecs_task_role_name      = "app-task-role"
+  iam_ecs_task_policy_name    = "app-task-policy"
+  app-ecr-repo-name           = "app"
+  certificate_arn             = module.dns.certificate_arn
+  vpc_id                      = module.network.vpc_id
+  vpc_public_subnet_ids       = module.network.public_subnet_ids
+  vpc_private_subnet_ids      = module.network.private_subnet_ids
+}
+
+
+module "network" {
+  source         = "./modules/network"
+  aws_region     = "ap-northeast-1"
+  vpc_cidr_block = "10.0.0.0/16"
+}
+
+
+module "mail-receive-trigger" {
+  source        = "./modules/mail-receive-trigger"
+  domain_name   = var.domain
+  bucket_name   = var.ses_s3_bucket_name
+  bucket_prefix = ""
+  function_name = "mail-receive-trigger-function"
 }

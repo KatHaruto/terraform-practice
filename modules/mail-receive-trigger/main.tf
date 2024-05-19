@@ -1,3 +1,60 @@
+
+resource "aws_s3_bucket" "mail_bucket" {
+  bucket = var.bucket_name
+}
+
+resource "aws_s3_bucket_policy" "mail_bucket_policy" {
+  bucket = aws_s3_bucket.mail_bucket.id
+  policy = data.aws_iam_policy_document.mail_bucket.json
+}
+
+data "aws_iam_policy_document" "mail_bucket" {
+  statement {
+    actions = [
+      "s3:PutObject",
+    ]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ses.amazonaws.com"]
+    }
+    resources = [
+      "${aws_s3_bucket.mail_bucket.arn}/*",
+    ]
+  }
+}
+
+
+resource "aws_ses_receipt_rule_set" "main" {
+  rule_set_name = "primary-rules"
+}
+
+resource "aws_ses_receipt_rule" "main" {
+  recipients    = [var.domain_name]
+  name          = "store-and-invoke-lambda"
+  rule_set_name = aws_ses_receipt_rule_set.main.rule_set_name
+  enabled       = true
+  scan_enabled  = true
+
+  s3_action {
+    bucket_name       = aws_s3_bucket.mail_bucket.bucket
+    object_key_prefix = var.bucket_prefix
+    position          = 1
+  }
+
+  lambda_action {
+    function_arn    = aws_lambda_function.hello_world.arn
+    invocation_type = "Event"
+    position        = 2
+  }
+
+  depends_on = [aws_s3_bucket_policy.mail_bucket_policy]
+}
+
+resource "aws_ses_active_receipt_rule_set" "main" {
+  rule_set_name = "primary-rules"
+}
+
 data "archive_file" "layer_zip" {
   type        = "zip"
   source_dir  = "lambda/build/layer"
@@ -57,24 +114,3 @@ resource "aws_iam_role" "lambda_iam_role" {
   managed_policy_arns = ["arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"]
 
 }
-
-# Policy
-# 中身はAWSLambdaBasicExecutionRoleと同じのためマネージドポリシーを利用して以下はコメントアウト
-# resource "aws_iam_role_policy" "lambda_access_policy" {
-#  name = "${var.function_name}_lambda_access_policy"
-#  role = aws_iam_role.lambda_iam_role.id
-#  policy = jsonencode({
-#    Version = "2012-10-17",
-#    Statement = [
-#      {
-#        Effect = "Allow",
-#        Action = [
-#          "logs:CreateLogStream",
-#          "logs:CreateLogGroup",
-#          "logs:PutLogEvents"
-#        ],
-#        Resource = "arn:aws:logs:*:*:*"
-#      }
-#    ]
-#  })
-#}

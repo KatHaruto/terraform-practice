@@ -1,7 +1,7 @@
 variable "receiver_address" {
   type = string
 }
-variable "ses_region" {
+variable "domain_hosted_zone_id" {
   type = string
 }
 variable "domain_name" {

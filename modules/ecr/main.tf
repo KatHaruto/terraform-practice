@@ -1,4 +1,8 @@
-resource "aws_ecr_repository" "engineebase_ml_repository" {
+locals {
+  app_dir_path = "${path.root}/app_sample"
+}
+
+resource "aws_ecr_repository" "app_repository" {
   name                 = var.image_name
   image_tag_mutability = "MUTABLE"
 
@@ -7,8 +11,8 @@ resource "aws_ecr_repository" "engineebase_ml_repository" {
   }
 }
 
-resource "aws_ecr_lifecycle_policy" "engineebase_ml_repository_policy" {
-  repository = aws_ecr_repository.engineebase_ml_repository.name
+resource "aws_ecr_lifecycle_policy" "app_repository_policy" {
+  repository = aws_ecr_repository.app_repository.name
   policy = jsonencode({
     rules = [
       {
@@ -25,4 +29,21 @@ resource "aws_ecr_lifecycle_policy" "engineebase_ml_repository_policy" {
       }
     ]
   })
+}
+
+resource "null_resource" "build_and_push" {
+  provisioner "local-exec" {
+    command = "aws ecr get-login-password --profile ${var.aws_profile} | docker login -u AWS --password-stdin ${aws_ecr_repository.app_repository.repository_url}"
+  }
+  provisioner "local-exec" {
+    command = "docker build  --platform amd64 -t ${var.image_name}:latest ${local.app_dir_path}"
+  }
+
+  provisioner "local-exec" {
+    command = "docker tag ${var.image_name}:latest ${aws_ecr_repository.app_repository.repository_url}"
+  }
+
+  provisioner "local-exec" {
+    command = "docker push ${aws_ecr_repository.app_repository.repository_url}"
+  }
 }

@@ -36,14 +36,14 @@ resource "null_resource" "build_and_push" {
     command = "aws ecr get-login-password --profile ${var.aws_profile} | docker login -u AWS --password-stdin ${aws_ecr_repository.app_repository.repository_url}"
   }
   provisioner "local-exec" {
-    command = "docker build  --platform amd64 -t ${var.image_name}:latest ${local.app_dir_path}"
+    command = "docker build  --platform linux/amd64 -t ${var.image_name}:latest ${local.app_dir_path}"
   }
 
   provisioner "local-exec" {
-    command = "docker tag ${var.image_name}:latest ${aws_ecr_repository.app_repository.repository_url}"
+    command = "docker tag ${var.image_name}:latest ${aws_ecr_repository.app_repository.repository_url}:latest"
   }
 
   provisioner "local-exec" {
-    command = "docker push ${aws_ecr_repository.app_repository.repository_url}"
+    command = "docker push ${aws_ecr_repository.app_repository.repository_url}:latest"
   }
 }

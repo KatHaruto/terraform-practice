@@ -39,8 +39,7 @@ resource "aws_key_pair" "key_pair" {
 }
 
 resource "aws_ec2_instance_connect_endpoint" "eic_test" {
-  count              = length(var.vpc_private_subnet_ids)
-  subnet_id          = var.vpc_private_subnet_ids[count.index]
+  subnet_id          = var.vpc_private_subnet_ids[0]
   security_group_ids = [aws_security_group.ssh_eic.id]
   preserve_client_ip = true
 }

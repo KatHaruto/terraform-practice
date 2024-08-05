@@ -42,3 +42,4 @@ lambda/*.zip
 ssh
 
 __pycache__/
+.DS_Store

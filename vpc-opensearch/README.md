@@ -1,3 +1,8 @@
+
+# WIP
+作業のメモをアップロードした
+
+
 ### ※ opensearch dashboard (旧 kibana)へのアクセス
 
 session manager を使ったポートフォワーディングを行って踏み台経由でアクセス

@@ -1,0 +1,1 @@
+{"filename": "builds/64546fcc586187a376f3449001b66b0d23826773033ae1e261228e66c1a35c4f.zip", "runtime": "python3.11", "artifacts_dir": "builds", "build_plan": [["zip", "aws/lambdas/snapshot_exporter", null]]}
